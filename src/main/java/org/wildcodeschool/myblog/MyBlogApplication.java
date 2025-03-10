@@ -1,4 +1,4 @@
-package org.wildcodeschool.myproject;
+package org.wildcodeschool.myblog;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
