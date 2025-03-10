@@ -22,38 +22,54 @@ public class ArticleController {
     @GetMapping
     public ResponseEntity<List<Article>> getAllArticles() {
         List<Article> articles = articleRepository.findAll();
-        if (articles.isEmpty()) {
-            return ResponseEntity.noContent().build(); // Renvoie un 204 si la liste est vide
-        }
-        return ResponseEntity.ok(articles); // Renvoie les articles avec un code 200
+        return articles.isEmpty() ? ResponseEntity.noContent().build() : ResponseEntity.ok(articles);
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<Article> getArticleById(@PathVariable Long id) {
-        Article article = articleRepository.findById(id).orElse(null);
-        if (article == null) {
-            return ResponseEntity.notFound().build(); // Renvoie un 404 si l'article n'existe pas
-        }
-        return ResponseEntity.ok(article); // Renvoie l'article avec un code 200
+        return articleRepository.findById(id)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @PostMapping
     public ResponseEntity<Article> createArticle(@RequestBody Article article) {
         article.setCreatedAt(LocalDateTime.now());
         article.setUpdatedAt(LocalDateTime.now());
-        Article savedArticle = articleRepository.save(article);
-        return ResponseEntity.status(HttpStatus.CREATED).body(savedArticle);
+        return ResponseEntity.status(HttpStatus.CREATED).body(articleRepository.save(article));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteArticle(@PathVariable Long id) {
+    public ResponseEntity<Object> deleteArticle(@PathVariable Long id) {
+        return articleRepository.findById(id)
+                .map(article -> {
+                    articleRepository.delete(article);
+                    return ResponseEntity.noContent().build();
+                }).orElseGet(() -> ResponseEntity.notFound().build());
+    }
 
-        Article article = articleRepository.findById(id).orElse(null);
-        if (article == null) {
-            return ResponseEntity.notFound().build();
-        }
+    @GetMapping("/search-title")
+    public ResponseEntity<List<Article>> getArticlesByTitle(@RequestParam String searchTerms) {
+        List<Article> articles = articleRepository.findByTitle(searchTerms);
+        return articles.isEmpty() ? ResponseEntity.noContent().build() : ResponseEntity.ok(articles);
+    }
 
-        articleRepository.delete(article);
-        return ResponseEntity.noContent().build();
+    @GetMapping("/search-content")
+    public ResponseEntity<List<Article>> getArticlesByContent(@RequestParam String keyword) {
+        List<Article> articles = articleRepository.findByContentContaining(keyword);
+        return articles.isEmpty() ? ResponseEntity.noContent().build() : ResponseEntity.ok(articles);
+    }
+
+    @GetMapping("/search-after-date")
+    public ResponseEntity<List<Article>> getArticlesCreatedAfter(@RequestParam String date) {
+        LocalDateTime dateTime = LocalDateTime.parse(date);
+        List<Article> articles = articleRepository.findByCreatedAtAfter(dateTime);
+        return articles.isEmpty() ? ResponseEntity.noContent().build() : ResponseEntity.ok(articles);
+    }
+
+    @GetMapping("/latest")
+    public ResponseEntity<List<Article>> getLastFiveArticles() {
+        List<Article> articles = articleRepository.findTop5ByOrderByCreatedAtDesc();
+        return articles.isEmpty() ? ResponseEntity.noContent().build() : ResponseEntity.ok(articles);
     }
 }
